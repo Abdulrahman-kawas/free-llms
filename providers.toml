@@ -17,9 +17,9 @@ order = [
   "gemini:gemini-3.6-flash",
   "gemini:gemini-3.5-flash",
   "groq:openai/gpt-oss-120b",
-  "ollama:deepseek-v4-flash",
-  "zai:glm-4.7-flash",
   "ollama:gpt-oss:120b",
+  "zai:glm-4.7-flash",
+  "ollama:nemotron-3-ultra",
   "cloudflare:@cf/openai/gpt-oss-120b",
   "groq:qwen/qwen3.6-27b",
   "groq:openai/gpt-oss-20b",
@@ -73,15 +73,16 @@ models = [
 base_url = "https://ollama.com/v1"
 key_env = "OLLAMA_API_KEY"
 reset_tz = "UTC"
+# Only these 6 answer on the free tier (checked 2026-10-07). The rest of the cloud list
+# (deepseek-v4.1-flash, deepseek-v4-pro, kimi-k3/k2.x, glm-5.x, minimax-m2.7/m3,
+# mistral-large-3) answer 402 "not included in your free usage"; mistral-large-4 is
+# still rolling out. Models get retired too: `free-llm models ollama` compares.
 models = [
-  { id = "deepseek-v4-flash", note = "1M ctx, fast" },
   { id = "gpt-oss:120b", note = "128K ctx" },
-  { id = "deepseek-v4-pro", note = "1M ctx, strongest, eats the limit faster" },
-  { id = "kimi-k3", note = "1M ctx" },
-  { id = "qwen3.5:397b", note = "256K ctx" },
-  { id = "minimax-m3", note = "512K ctx" },
-  { id = "mistral-large-3:675b", note = "256K ctx" },
   { id = "nemotron-3-ultra", note = "262K ctx" },
+  { id = "nemotron-3-super", note = "" },
+  { id = "gemma4:31b", note = "vision" },
+  { id = "nemotron-3-nano:30b", note = "small, fast" },
   { id = "gpt-oss:20b", note = "131K ctx" },
 ]
 

@@ -147,6 +147,9 @@ def test_classify():
     assert classify(429, "you've reached your weekly usage limit", {}, NOW, "UTC")[0].startswith("weekly")
     assert classify(429, "you've reached your session usage limit", {}, NOW, "UTC")[1] == NOW + 3600
     assert classify(503, "", {}, NOW, "UTC") == ("provider error (503)", NOW + 30)
+    assert classify(410, "was retired", {}, NOW, "UTC")[1] == NOW + 7 * 24 * 3600
+    paid = "this model is not included in your free usage, add usage credits"
+    assert classify(402, paid, {}, NOW, "UTC") == ("not on the free tier (402)", NOW + 7 * 24 * 3600)
     assert classify(0, "URLError", {}, NOW, "UTC")[1] == NOW + 30
     assert classify(422, "bad", {}, NOW, "UTC")[1] is None
 

@@ -29,6 +29,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("text")
     p.add_argument("-m", "--model", default="auto")
     sub.add_parser("check", help="test each provider's key (free: no chat request)")
+    p = sub.add_parser("models", help="a provider's live models vs providers.toml (free)")
+    p.add_argument("provider")
     p = sub.add_parser("ping", help="send 'Say OK' to one model (spends one request)")
     p.add_argument("model")
     p = sub.add_parser("reset", help="forget rests (of one model, or all)")
@@ -59,6 +61,16 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "check":
             for name in router.config.providers:
                 print(f"{name:<12} {router.check(name)}")
+        elif args.cmd == "models":
+            if args.provider not in router.config.providers:
+                raise KeyError(f"no provider {args.provider!r}; have: {', '.join(router.config.providers)}")
+            live = set(router.live_models(args.provider))
+            mine = {m.id for m in router.config.models.values() if m.provider == args.provider}
+            for mid in sorted(live | mine):
+                mark = "  " if mid in live and mid in mine else ("+ " if mid in live else "- ")
+                print(f"{mark}{mid}")
+            print("\n+ offered, not in providers.toml (may be paid-only: `free-llm ping` it)"
+                  "\n- in providers.toml, no longer offered")
         elif args.cmd == "ping":
             reply = router.chat([{"role": "user", "content": "Say OK"}], model=args.model,
                                 max_tokens=200)

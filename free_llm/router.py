@@ -9,6 +9,7 @@ key, resting, busy or at its daily_limit, and on a failure rests that model and 
 * 429 per minute                               -> rests for Retry-After, or 60 s
 * 5xx, timeout, network                        -> rests 30 s
 * 401/403 (bad key), 404 (no such model)       -> rests 6 h
+* 410 (model retired), 402 (not on free tier)  -> rests 7 days
 * any other 4xx                                -> no rest, next model
 
 Rests, today's counts and your pick live in .state.json next to providers.toml, so every
@@ -80,6 +81,10 @@ def classify(status: int, body: str, headers: dict, now: float, tz: str) -> tupl
         return f"key refused ({status})", now + 6 * HOUR
     if status == 404:
         return "model not found (404)", now + 6 * HOUR
+    if status == 410:
+        return "model retired (410): fix providers.toml", now + 7 * 24 * HOUR
+    if status == 402 and any(w in low for w in ("not included", "credits", "upgrade")):
+        return "not on the free tier (402)", now + 7 * 24 * HOUR
     if status in (402, 429):
         daily = ("perday", "per day", "daily", "rpd", "neurons", "insufficient", "balance", "1113")
         if any(w in low for w in daily):
@@ -271,6 +276,15 @@ class Router:
         if until:
             self.state.change(lambda s: s["rest"].update({m.key: {"until": until, "why": why}}))
         return None, why
+
+    def live_models(self, provider: str) -> list[str]:
+        """The model ids the provider offers right now (GET /models, no chat quota)."""
+        status, text, _ = self._request(
+            "GET", f"{self.config.url(provider)}/models", self.config.api_key(provider), None, 30
+        )
+        if not 200 <= status < 300:
+            raise RuntimeError(f"{provider} /models answered {status}: {text[:150]}")
+        return sorted(m["id"] for m in json.loads(text).get("data", []))
 
     def check(self, provider: str) -> str:
         """Ask a provider for its model list: proves the key without spending chat quota."""
