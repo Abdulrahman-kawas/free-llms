@@ -1,0 +1,100 @@
+# Free LLM providers: everything but the keys. Keys live in .env (never in git).
+#
+# A model is named "provider:model-id", e.g. "groq:openai/gpt-oss-120b".
+# "auto" tries `order` top to bottom (after the one you picked with `free-llm use`, if any)
+# and skips a model that has no key, is resting after a 429/5xx, or has hit its daily_limit.
+#
+# Per provider:
+#   base_url        OpenAI-compatible base; {VAR} is filled from .env (Cloudflare's account id)
+#   key_env         the .env variable that holds the key
+#   reset_tz        the time zone whose midnight ends a "daily quota spent" rest
+#   max_concurrent  how many requests at once (Z AI allows 1); "auto" skips a busy provider
+#   extra_body      sent with every request; a model's own extra_body overrides it
+# Per model:
+#   daily_limit     stop sending once this many went out today (counted here, on this machine)
+
+order = [
+  "gemini:gemini-3.6-flash",
+  "gemini:gemini-3.5-flash",
+  "groq:openai/gpt-oss-120b",
+  "ollama:deepseek-v4-flash",
+  "zai:glm-4.7-flash",
+  "ollama:gpt-oss:120b",
+  "cloudflare:@cf/openai/gpt-oss-120b",
+  "groq:qwen/qwen3.6-27b",
+  "groq:openai/gpt-oss-20b",
+  "cloudflare:@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  "cloudflare:@cf/mistralai/mistral-small-3.1-24b-instruct",
+]
+
+# ── Google Gemini ── https://aistudio.google.com/apikey
+# Free tier is 20 requests/day PER MODEL for the whole Google project (not 1,500).
+[providers.gemini]
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+key_env = "GEMINI_API_KEY"
+reset_tz = "America/Los_Angeles"
+# Thinking is spent out of max_tokens; "minimal" leaves the budget for the answer.
+extra_body = { reasoning_effort = "minimal" }
+models = [
+  { id = "gemini-3.6-flash", daily_limit = 20, note = "20/day" },
+  { id = "gemini-3.5-flash", daily_limit = 20, note = "20/day, its own quota" },
+]
+
+# ── Groq ── https://console.groq.com/keys (no credit card, very fast)
+[providers.groq]
+base_url = "https://api.groq.com/openai/v1"
+key_env = "GROQ_API_KEY"
+reset_tz = "UTC"
+models = [
+  { id = "openai/gpt-oss-120b", daily_limit = 1000, note = "30 RPM, 1,000/day, 131K ctx", extra_body = { reasoning_effort = "low" } },
+  { id = "openai/gpt-oss-20b", daily_limit = 1000, note = "30 RPM, 1,000/day", extra_body = { reasoning_effort = "low" } },
+  { id = "qwen/qwen3.6-27b", daily_limit = 1000, note = "30 RPM, 1,000/day" },
+  { id = "groq/compound-mini", daily_limit = 250, note = "250/day, can search the web" },
+]
+
+# ── Z AI (Zhipu) ── https://open.bigmodel.cn (international site: https://z.ai, then
+# base_url = "https://api.z.ai/api/paas/v4" with a z.ai key). Free forever, 1 request at a time.
+[providers.zai]
+base_url = "https://open.bigmodel.cn/api/paas/v4"
+key_env = "ZAI_API_KEY"
+reset_tz = "Asia/Shanghai"
+max_concurrent = 1
+# GLM thinks by default; off keeps answers quick. Set type = "enabled" for hard reasoning.
+extra_body = { thinking = { type = "disabled" } }
+models = [
+  { id = "glm-4.7-flash", note = "200K ctx, 128K out" },
+  { id = "glm-4.6v-flash", note = "multimodal (images)" },
+]
+
+# ── Ollama Cloud ── https://ollama.com/settings/keys
+# Free tier with session and weekly limits (numbers not published). Its native API is
+# https://ollama.com/api; this is the OpenAI-compatible one. Names keep their ":tag".
+[providers.ollama]
+base_url = "https://ollama.com/v1"
+key_env = "OLLAMA_API_KEY"
+reset_tz = "UTC"
+models = [
+  { id = "deepseek-v4-flash", note = "1M ctx, fast" },
+  { id = "gpt-oss:120b", note = "128K ctx" },
+  { id = "deepseek-v4-pro", note = "1M ctx, strongest, eats the limit faster" },
+  { id = "kimi-k3", note = "1M ctx" },
+  { id = "qwen3.5:397b", note = "256K ctx" },
+  { id = "minimax-m3", note = "512K ctx" },
+  { id = "mistral-large-3:675b", note = "256K ctx" },
+  { id = "nemotron-3-ultra", note = "262K ctx" },
+  { id = "gpt-oss:20b", note = "131K ctx" },
+]
+
+# ── Cloudflare Workers AI ── https://dash.cloudflare.com → AI → Workers AI → "Use REST API"
+# 10,000 neurons/day shared by all models. Needs the account id as well as a token.
+[providers.cloudflare]
+base_url = "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai/v1"
+key_env = "CLOUDFLARE_API_TOKEN"
+reset_tz = "UTC"
+models = [
+  { id = "@cf/openai/gpt-oss-120b", note = "128K ctx" },
+  { id = "@cf/meta/llama-3.3-70b-instruct-fp8-fast", note = "24K ctx" },
+  { id = "@cf/mistralai/mistral-small-3.1-24b-instruct", note = "128K ctx" },
+  { id = "@cf/google/gemma-4-26b-a4b-it", note = "256K ctx, vision" },
+  { id = "@cf/zai-org/glm-4.7-flash", note = "131K ctx" },
+]
