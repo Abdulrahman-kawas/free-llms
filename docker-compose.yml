@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  free-llm:
+    build: .
+    container_name: free-llm-dev
+    ports:
+      - "8787:8787"
+    environment:
+      # من .env (أضفها هنا أو عبر --env-file)
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      ZAI_API_KEY: ${ZAI_API_KEY:-}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY:-}
+      FREE_LLM_PROXY_KEY: ${FREE_LLM_PROXY_KEY:-}
+    volumes:
+      - ./providers.toml:/app/providers.toml:ro
+      - ./free_llm:/app/free_llm:ro
+      - free-llm-state:/app
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  free-llm-state:
+    driver: local
