@@ -17,7 +17,6 @@ services:
     volumes:
       - ./providers.toml:/app/providers.toml:ro
       - ./free_llm:/app/free_llm:ro
-      - free-llm-state:/app
     env_file:
       - .env
     restart: unless-stopped
@@ -27,7 +26,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
-
-volumes:
-  free-llm-state:
-    driver: local
